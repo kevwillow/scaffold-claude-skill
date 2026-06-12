@@ -115,6 +115,81 @@ Once installed, ask Claude (or invoke the skill directly). One-liners:
 Claude applies the bundled prompt, validates the result, and writes the committable
 `.json` file(s).
 
+## Use it on your own CLI (end-to-end)
+
+The full loop for scaffolding a GUI for *your own* program. Schema and preset
+generation happen in **Claude Code** (this skill); the **Scaffold** desktop app
+then consumes the JSON and renders the form.
+
+### 1. Prerequisites
+
+- The **Scaffold desktop app** installed — it's what turns the JSON into a GUI
+  (see the [Scaffold repo](https://github.com/kevlattice/scaffold)).
+- This **skill installed** via either path above (plugin marketplace or manual
+  clone), plus **Python 3.10+** for the validators.
+
+Generation, validation, and Scaffold itself are all local — nothing here needs the
+network.
+
+### 2. Generate a schema for your tool
+
+Gather your CLI's documentation — `mytool --help` output, a man page, or a docs
+URL — and ask Claude with the skill active:
+
+> *"Use the scaffold skill to generate a Scaffold schema for `greet --help`:"*
+> then paste the help text (or give the man page / URL).
+
+The skill applies the canonical `SCHEMA_PROMPT.txt` verbatim, validates the result
+with `validate_schema.py`, and writes `greet.json` (named after the binary).
+
+### 3. Put `greet.json` where Scaffold finds it — the key step
+
+Scaffold's tool picker scans a **`tools/` folder** (including subfolders) and lists
+every `.json` schema in it. Drop your `greet.json` there. *Which* `tools/` folder
+depends on how Scaffold runs:
+
+| How Scaffold runs | Put your schema in |
+|-------------------|--------------------|
+| Installed app — Windows | `%APPDATA%\Scaffold\tools\` |
+| Installed app — macOS | `~/Library/Application Support/Scaffold/tools/` |
+| Installed app — Linux | `~/.local/share/Scaffold/tools/` |
+| From source / portable build | the `tools/` folder next to `scaffold.py` |
+
+The bundled schemas in that folder are read-only; your own go in the same writable
+user `tools/` folder. The filename convention is `<binary>.json`, but Scaffold
+reads the `tool`/`binary` fields *inside* the file, so any `.json` name works.
+Reopen Scaffold (or its tool picker) and `greet` appears in the list. *(Grounded in
+`scaffold.py`'s `_tools_dir()` / `ToolPicker.scan()` and the "User data" section of
+Scaffold's README.)*
+
+### 4. Generate presets for your tool
+
+Presets require an existing schema. Give Claude the schema path plus a plain-English
+description of what you want:
+
+> *"Use the scaffold skill to make a preset for `tools/greet.json`: shout
+> 'HELLO' three times."*
+
+The skill validates each preset against that schema and writes it with a
+lowercase-underscore filename (e.g. `shout_hello.json`). Presets live under the
+**same user-data root** as step 3:
+
+```
+<user-data>/presets/<tool>/<name>.json
+```
+
+where `<tool>` is the schema's `tool` field (here `greet`) — for example
+`%APPDATA%\Scaffold\presets\greet\shout_hello.json` (installed, Windows) or
+`presets/greet/shout_hello.json` next to `scaffold.py` (source mode). Scaffold's
+preset picker lists every `.json` in that tool's folder. *(Grounded in
+`scaffold.py`'s `_presets_dir()`.)*
+
+### 5. Order & offline
+
+Generate the **schema first, then any presets** — a preset is meaningless without
+its schema. None of these steps — generation, validation, or Scaffold rendering and
+running the command — requires internet access.
+
 ## License
 
 This distribution is licensed under the **MIT License** — see [`LICENSE`](LICENSE).
