@@ -1,0 +1,4 @@
+# Normalize line endings to LF in the repo and on checkout everywhere, so the
+# mirrored prompts (SCHEMA_PROMPT.txt, PRESET_PROMPT.txt) and schema.md stay
+# byte-identical to the canonical Scaffold sources on every clone/platform.
+* text=auto eol=lf

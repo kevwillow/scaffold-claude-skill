@@ -1,0 +1,8 @@
+{
+  "name": "scaffold-gui",
+  "version": "1.0.0",
+  "description": "Generate Scaffold tool schemas and presets for CLI tools from --help output, man pages, or docs. Bundles the canonical conversion prompts and stdlib-only validators.",
+  "author": {
+    "name": "kevwillow"
+  }
+}

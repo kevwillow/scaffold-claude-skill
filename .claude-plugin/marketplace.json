@@ -1,0 +1,13 @@
+{
+  "name": "scaffold-claude-skill",
+  "owner": {
+    "name": "kevwillow"
+  },
+  "plugins": [
+    {
+      "name": "scaffold-gui",
+      "source": "./",
+      "description": "Generate Scaffold tool schemas and presets for CLI tools from --help output, man pages, or docs."
+    }
+  ]
+}
