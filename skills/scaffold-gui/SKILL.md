@@ -1,17 +1,18 @@
 ---
 name: scaffold-gui
 description: >-
-  Generate Scaffold artifacts so Scaffold (an offline desktop GUI) can render
-  native forms for CLI tools. TWO capabilities. (1) SCHEMA generation from CLI
-  docs — use for "generate a scaffold schema", "make a GUI schema for my CLI",
-  "create a scaffold_schema JSON", "turn my --help / man page into a Scaffold
-  form", "scaffold a GUI for <binary>"; takes --help output, a man page, or a
-  docs URL. (2) PRESET generation — use for "make a scaffold preset", "save a
-  form config for my tool", "create a preset for <tool>"; takes an EXISTING
-  tool schema JSON plus a natural-language description of the desired preset(s).
-  Both apply a bundled canonical prompt verbatim, auto-validate against the real
-  rules, and write committable files. Preset generation REQUIRES an existing
-  schema as input.
+  Generate Scaffold schemas/presets so the Scaffold desktop GUI can render
+  native forms for CLI tools. (1) SCHEMA generation — use for "generate a
+  scaffold schema", "make a GUI schema for my CLI", "create a scaffold_schema
+  JSON", "turn my --help / man page into a Scaffold form", "scaffold a GUI for
+  <binary>", and the preferred project-context flow "use the scaffold skill and
+  my project's context to build a GUI for my CLI", "scaffold a form for the tool
+  in this repo", "build a Scaffold GUI for what I'm building". Reads the CLI's
+  argument-parser source + README/docs (or pasted --help/man/docs URL). (2)
+  PRESET generation — use for "make a scaffold preset", "save a form config for
+  my tool", "create a preset for <tool>"; needs an EXISTING schema plus a
+  natural-language description. Both apply a bundled canonical prompt verbatim
+  and auto-validate.
 ---
 
 # scaffold-gui — generate Scaffold schemas and presets
@@ -56,16 +57,90 @@ modify `scaffold.py` or any application code.
 
 Run these steps in order.
 
-### 1. Get the CLI documentation
+### 1. Assemble the CLI documentation
 
-Ask the user for the tool's documentation if not already provided, accepting any of:
+Gather the source material that Step 2 will feed into the canonical prompt.
+There are two modes; **prefer project-context mode** whenever you have access to
+the CLI's repository, because it fills the fields `--help` alone can't (see the
+synthesis guidance below).
+
+#### Mode A — project-context mode (preferred)
+
+When you are run inside, or pointed at, the CLI's own repository, **read the
+project before converting** and synthesize a single complete "CLI documentation"
+blob from all of it:
+
+- **Argument-parser source** — detect the ACTUAL parser; do not assume a
+  framework. It may be a library (argparse, click, typer, cobra, clap, oclif,
+  picocli) OR a stdlib/hand-rolled parser (Go `flag` with an `os.Args` switch,
+  Python bare `sys.argv`, shell `getopts`, etc.). Read the real flag
+  definitions. This is the authoritative source for every real flag, enum
+  `choices`, `default=` values, `required`, types, and **mutual-exclusivity
+  groups** (e.g. argparse `add_mutually_exclusive_group()`, click
+  `Cloup`/constraints — stdlib/hand-rolled parsers usually express none).
+- **README, any `docs/` directory, and man pages** — for the real human
+  descriptions (the hover tooltips), rationale, usage examples, and
+  prose-stated constraints ("cannot be used with", "requires", "only valid
+  with").
+- **`--help` / `-h` output** — as one additional signal.
+
+Then write ONE consolidated documentation blob (following the synthesis guidance
+below) and pass it to Step 2.
+
+#### Mode B — paste mode (fallback)
+
+When you do not have the repo, use whatever the user provides, exactly as
+before:
 
 - `--help` / `-h` output pasted in,
 - a man page (pasted text), or
 - a docs URL — fetch it with WebFetch and use the rendered text.
 
-Confirm the **exact binary name** (used for the output filename and the
-`binary` field).
+#### Synthesis guidance (Mode A — how the richer fields get populated)
+
+When assembling the blob from project context, do this so the **verbatim**
+prompt can map it to the right schema fields:
+
+- **Cross-check every flag against the actual parser** — include only flags that
+  genuinely exist in the source. (Honors the prompt's Rule 9 "do not invent
+  flags"; reading source is authority, not invention.)
+- **Pull `default=` and enum `choices` from the parser source** — explicit
+  defaults/choices satisfy the prompt's Rule 7 "defaults only when docs
+  explicitly state them". Derive `choices` not only from declared lists
+  (`choices=[...]`) but also from **validation logic** that rejects other values
+  — switch statements, or guards like `if x != "a" && x != "b" { error }` →
+  `["a", "b"]`.
+- **State mutual exclusivity explicitly** in the blob (e.g. "`--a` and `--b` are
+  mutually exclusive") so the prompt's Rule 2 maps them to `group`. Distinguish
+  **hard** exclusivity (the CLI rejects the combination) from **soft** precedence
+  ("only one takes effect", e.g. one mode wins by priority); emit a `group` for
+  either, but say which in the `description` so you don't imply enforcement the
+  CLI doesn't perform.
+- **State dependency relationships explicitly** (e.g. "`--cert` requires
+  `--key`", "`--verbose` is only valid with `--log`"). **This is essential:** the
+  canonical prompt defines `depends_on` but has NO extraction rule for it, so a
+  dependency only becomes `depends_on` if it is written in plain text in the
+  synthesized docs. This is the main reason project-context mode produces better
+  forms than `--help` alone. **`depends_on` is flag→flag only** — runtime
+  preconditions ("requires an active login", "must run as root") are NOT flag
+  dependencies; keep them out of `depends_on` and mention them in the
+  `description` instead.
+- **Pull real descriptions** from README/docs/man for each flag — fuller hover
+  tooltips than `--help`'s terse blurbs.
+- **Map unsupported types to `string` + `examples`** — for a type Scaffold has
+  no widget for (e.g. a Go `time.Duration`), use `string` and add helpful
+  `examples` like `"8h"`, `"1h30m"`.
+- **Scope large CLIs deliberately** — for deep multi-level subcommand trees,
+  confirm with the user which subcommands/scope to include rather than forcing an
+  unwieldy one-shot schema, and record anything you leave out in
+  `_coverage: "partial: [...]"`.
+
+Richer input directly improves `group`, `depends_on`, `choices`, `default`,
+`description`, and `display_group` — the fields `--help` can't fill. Everything
+downstream (the conversion, validation, output) is unchanged.
+
+In both modes, confirm the **exact binary name** (used for the output filename
+and the `binary` field), then proceed to Step 2.
 
 ### 2. Apply `SCHEMA_PROMPT.txt` verbatim
 

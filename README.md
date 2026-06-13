@@ -133,14 +133,26 @@ network.
 
 ### 2. Generate a schema for your tool
 
-Gather your CLI's documentation — `mytool --help` output, a man page, or a docs
-URL — and ask Claude with the skill active:
+**Preferred — project-context mode.** Run the skill **from inside your CLI's
+repo** and ask it to build the schema. Instead of relying on `--help` alone, it
+reads your **argument-parser source** (argparse/click/cobra/clap/… or a
+hand-rolled parser) plus the **README/`docs/`/man pages** to recover the rich
+relationships `--help` can't give — mutually-exclusive flag `group`s,
+`depends_on` dependencies, enum `choices`, defaults, and real hover
+descriptions:
+
+> *"Use the scaffold skill and my project's context to build a Scaffold schema
+> for `greet`."*
+
+**Fallback — paste mode.** If you don't have the repo handy, give it the docs
+directly:
 
 > *"Use the scaffold skill to generate a Scaffold schema for `greet --help`:"*
-> then paste the help text (or give the man page / URL).
+> then paste the help text (or give the man page / docs URL).
 
-The skill applies the canonical `SCHEMA_PROMPT.txt` verbatim, validates the result
-with `validate_schema.py`, and writes `greet.json` (named after the binary).
+Either way, the skill applies the canonical `SCHEMA_PROMPT.txt` verbatim,
+validates the result with `validate_schema.py`, and writes `greet.json` (named
+after the binary).
 
 ### 3. Put `greet.json` where Scaffold finds it — the key step
 
