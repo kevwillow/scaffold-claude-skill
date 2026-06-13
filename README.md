@@ -1,6 +1,6 @@
 # scaffold-gui — a Claude Code skill for Scaffold
 
-Generate [Scaffold](https://github.com/kevlattice/scaffold) artifacts from inside
+Generate [Scaffold](https://github.com/kevwillow/scaffold) artifacts from inside
 a Claude Code session. **Scaffold** is an offline desktop GUI that renders native
 forms from JSON "schemas" describing CLI tools, then assembles and runs the
 command for you.
@@ -124,7 +124,7 @@ then consumes the JSON and renders the form.
 ### 1. Prerequisites
 
 - The **Scaffold desktop app** installed — it's what turns the JSON into a GUI
-  (see the [Scaffold repo](https://github.com/kevlattice/scaffold)).
+  (see the [Scaffold repo](https://github.com/kevwillow/scaffold)).
 - This **skill installed** via either path above (plugin marketplace or manual
   clone), plus **Python 3.10+** for the validators.
 
